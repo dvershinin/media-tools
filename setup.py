@@ -16,5 +16,6 @@ setup(
         # Add your dependencies here
         # For example, 'requests', 'numpy', etc.
         "pytz",
+        "openai"
     ],
 )

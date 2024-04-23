@@ -3,10 +3,13 @@
 import json
 import os
 import subprocess
+import tempfile
 from pathlib import Path
 import pytz
 import datetime
 import logging
+from openai import OpenAI
+client = OpenAI()
 
 log = logging.getLogger(__name__)
 
@@ -29,6 +32,22 @@ def get_file_metadata(file_path):
 
         # The output is a JSON string in a list, so parse it and get the first item
         metadata_list = json.loads(result.stdout)
+
+        # if the file is a video file, extract audio to a temporary file
+        if metadata_list[0].get("MIMEType") == "video/mp4":
+            # using tempfile
+            with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as temp_audio:
+                audio_file_path = temp_audio.name
+                cmd = ['ffmpeg', '-i', file_path, '-vn', '-acodec', 'libmp3lame', '-y', audio_file_path]
+                subprocess.run(cmd, check=True)
+                print(f"Extracted audio to {audio_file_path}")
+                audio_file = open(audio_file_path, "rb")
+                transcription = client.audio.transcriptions.create(
+                    model="whisper-1",
+                    file=audio_file
+                )
+                print(transcription.text)
+
         if metadata_list:
             return metadata_list[
                 0]  # Assuming there's only one file processed, return its metadata
